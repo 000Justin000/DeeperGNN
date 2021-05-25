@@ -107,22 +107,26 @@ warnings.filterwarnings("ignore", category=UserWarning)
     
 if args.dataset == "Cora" or args.dataset == "CiteSeer" or args.dataset == "PubMed":
     dataset = get_planetoid_dataset(args.dataset, args.normalize_features)
-    permute_masks = random_planetoid_splits if args.random_splits else None
+    permute_masks = random_splits
     print("Data:", dataset[0])
     run(dataset, Net(dataset), args.runs, args.epochs, args.lr, args.weight_decay, args.early_stopping, permute_masks, lcc=False)
 elif args.dataset == "cs" or args.dataset == "physics":
     dataset = get_coauthor_dataset(args.dataset, args.normalize_features)
-    permute_masks = random_coauthor_amazon_splits
+    permute_masks = random_splits
     print("Data:", dataset[0])
     run(dataset, Net(dataset), args.runs, args.epochs, args.lr, args.weight_decay, args.early_stopping, permute_masks, lcc=False)
-elif args.dataset == "computers" or args.dataset == "photo":
-    dataset = get_amazon_dataset(args.dataset, args.normalize_features)
-    permute_masks = random_coauthor_amazon_splits
+elif args.dataset == "ising+" or args.dataset == "ising-" or args.dataset == "mrf+" or args.dataset == "mrf-":
+    dataset = get_synthetic_dataset(args.dataset, args.normalize_features)
+    permute_masks = random_splits
     print("Data:", dataset[0])
-    run(dataset, Net(dataset), args.runs, args.epochs, args.lr, args.weight_decay, args.early_stopping, permute_masks, lcc=True)
-
-
-
-
-
-
+    run(dataset, Net(dataset), args.runs, args.epochs, args.lr, args.weight_decay, args.early_stopping, permute_masks, lcc=False)
+elif args.dataset == "county_facebook":
+    dataset = get_county_dataset(args.dataset, args.normalize_features)
+    permute_masks = random_splits
+    print("Data:", dataset[0])
+    run(dataset, Net(dataset), args.runs, args.epochs, args.lr, args.weight_decay, args.early_stopping, permute_masks, lcc=False)
+elif args.dataset == "sexual_interaction":
+    dataset = get_sexual_dataset(args.dataset, args.normalize_features)
+    permute_masks = random_splits
+    print("Data:", dataset[0])
+    run(dataset, Net(dataset), args.runs, args.epochs, args.lr, args.weight_decay, args.early_stopping, permute_masks, lcc=False)

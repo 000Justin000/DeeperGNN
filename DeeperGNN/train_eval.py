@@ -14,68 +14,34 @@ from tqdm import tqdm
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+def rand_split(x, ps):
+    assert abs(sum(ps) - 1) < 1.0e-10
+
+    shuffled_x = np.random.permutation(x)
+    n = len(shuffled_x)
+    pr = lambda p: int(np.ceil(p*n))
+
+    cs = np.cumsum([0] + ps)
+
+    return tuple(shuffled_x[pr(cs[i]):pr(cs[i+1])] for i in range(len(ps)))
+
+
 def index_to_mask(index, size):
     mask = torch.zeros(size, dtype=torch.bool, device=index.device)
     mask[index] = 1
     return mask
 
 
-def random_planetoid_splits(data, num_classes, lcc_mask):
-    # Set new random planetoid splits:
-    # * 20 * num_classes labels for training
-    # * 500 labels for validation
-    # * 1000 labels for testing
+def random_splits(data, num_classes, lcc_mask):
 
-    indices = []
-    if lcc_mask is not None:
-        for i in range(num_classes):
-            index = (data.y[lcc_mask] == i).nonzero().view(-1)
-            index = index[torch.randperm(index.size(0))]
-            indices.append(index)
-    else:
-        for i in range(num_classes):
-            index = (data.y == i).nonzero().view(-1)
-            index = index[torch.randperm(index.size(0))]
-            indices.append(index)
+    num_nodes = data.x.shape[0]
 
-    train_index = torch.cat([i[:20] for i in indices], dim=0)
+    train_idx, val_idx, test_idx = rand_split(num_nodes, [0.3, 0.2, 0.5])
+    train_idx, val_idx, test_idx = torch.tensor(train_idx), torch.tensor(val_idx), torch.tensor(test_idx)
 
-    rest_index = torch.cat([i[20:] for i in indices], dim=0)
-    rest_index = rest_index[torch.randperm(rest_index.size(0))]
-
-    data.train_mask = index_to_mask(train_index, size=data.num_nodes)
-    data.val_mask = index_to_mask(rest_index[:500], size=data.num_nodes)
-    data.test_mask = index_to_mask(rest_index[500:1500], size=data.num_nodes)
-
-    return data
-
-def random_coauthor_amazon_splits(data, num_classes, lcc_mask):
-    # Set random coauthor/co-purchase splits:
-    # * 20 * num_classes labels for training
-    # * 30 * num_classes labels for validation
-    # rest labels for testing
-
-    indices = []
-    if lcc_mask is not None:
-        for i in range(num_classes):
-            index = (data.y[lcc_mask] == i).nonzero().view(-1)
-            index = index[torch.randperm(index.size(0))]
-            indices.append(index)
-    else:
-        for i in range(num_classes):
-            index = (data.y == i).nonzero().view(-1)
-            index = index[torch.randperm(index.size(0))]
-            indices.append(index)
-
-    train_index = torch.cat([i[:20] for i in indices], dim=0)
-    val_index = torch.cat([i[20:50] for i in indices], dim=0)
-
-    rest_index = torch.cat([i[50:] for i in indices], dim=0)
-    rest_index = rest_index[torch.randperm(rest_index.size(0))]
-
-    data.train_mask = index_to_mask(train_index, size=data.num_nodes)
-    data.val_mask = index_to_mask(val_index, size=data.num_nodes)
-    data.test_mask = index_to_mask(rest_index, size=data.num_nodes)
+    data.train_mask = torch.zeros(num_nodes, dtype=bool).scatter_(0, train_idx, True)
+    data.val_mask = torch.zeros(num_nodes, dtype=bool).scatter_(0, val_idx, True)
+    data.test_mask = torch.zeros(num_nodes, dtype=bool).scatter_(0, test_idx, True)
 
     return data
 
